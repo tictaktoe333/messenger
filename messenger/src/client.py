@@ -4,7 +4,7 @@ import socket
 import threading
 
 # client configuration
-host = '10.10.10.111'
+host = '192.168.2.111'
 port = 55555
 
 # create a socket

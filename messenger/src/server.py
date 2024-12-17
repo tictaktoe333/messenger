@@ -4,7 +4,7 @@ import socket
 import threading
 
 # server configuration
-host = '10.10.10.111'
+host = '192.168.2.111'
 port = 55555
 
 # create a socket
@@ -49,7 +49,7 @@ def receive():
 
         print(f"Nickname of the client is {nickname}")
         broadcast(f"{nickname} joined the chat!".encode('ascii'))
-        client.send('Connected to the server!'.encode('ascii')
+        client.send('Connected to the server!'.encode('ascii'))
 
         thread = threading.Thread(target=handle, args=(client,))
         thread.start()
