@@ -1,43 +1,65 @@
-# Client for the server
-
+import logging
+import selectors
 import socket
 import threading
 
-# client configuration
-host = '192.168.2.111'
-port = 55555
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-# create a socket
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((host, port))
 
-# receive messages from the server
-def receive():
-    while True:
+class Client:
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_address = ("localhost", 55555)
+
+    def connect_to_server(self):
         try:
-            message = client.recv(1024).decode('ascii')
-            if message == 'NICK':
-                client.send(nickname.encode('ascii'))
-            else:
-                print(message)
-        except:
-            print("An error occurred!")
-            client.close()
-            break
+            self.client_socket.connect(self.server_address)
+            logger.info(f"Connected to server at {self.server_address}")
+        except socket.error as e:
+            logger.error(f"Failed to connect: {e}")
 
-# send messages to the server
-def write():
-    while True:
-        message = f'{nickname}: {input("")}'
-        client.send(message.encode('ascii'))
+    def disconnect_from_server(self):
+        try:
+            self.client_socket.close()
+            logger.info("Disconnected from server")
+        except socket.error as e:
+            logger.error(f"Failed to disconnect: {e}")
 
-# set nickname
-nickname = input("Choose a nickname: ")
+    def send_message_to_server(self, message):
+        try:
+            self.client_socket.sendall(message.encode())
+            logger.info(f"Sent message: {message}")
+        except socket.error as e:
+            logger.error(f"Failed to send message: {e}")
 
-# start threads for receiving and writing messages
-receive_thread = threading.Thread(target=receive)
-receive_thread.start()
+    def send_message_to_user(self, user_id, message):
+        try:
+            self.client_socket.sendall(f"{user_id}:{message}".encode())
+            logger.info(f"Sent message to user {user_id}: {message}")
+        except socket.error as e:
+            logger.error(f"Failed to send message to user: {e}")
 
-write_thread = threading.Thread(target=write)
+    def receive_message(self):
+        try:
+            data = self.client_socket.recv(1024)
+            if not data:
+                logger.info("Server disconnected")
+                return None
+            message = data.decode()
+            logger.info(f"Received message: {message}")
+            return message
+        except socket.error as e:
+            logger.error(f"Failed to receive message: {e}")
+            return None
 
-write_thread.start()
+    def run(self):
+        while True:
+            user_id = input("Enter your user ID: ")
+            message = input("Enter your message: ")
+            self.send_message_to_user(user_id, message)
+            received_message = self.receive_message()
+            if received_message:
+                print(received_message)
