@@ -29,3 +29,23 @@ class Server:
         self.server_socket.listen(self.concurrent_connections)
         logger.info(f"Server listening on {self.host}:{self.port}")
         sel.register(self.server_socket, selectors.EVENT_READ)
+        logger.debug("Selector registered for server socket")
+
+    def run(self):
+        while True:
+            # accept an incoming connection
+            client_socket, addr = self.server_socket.accept()
+            print(f"Connected by {addr}")
+            # receive data from the client
+            data = client_socket.recv(1024).decode("utf-8")
+            print(f"Received: {data}")
+            # send a response back to the client
+            response = "Hello, client!"
+            client_socket.sendall(response.encode("utf-8"))
+            # close the connection with the client
+            client_socket.close()
+
+
+if __name__ == "__main__":
+    server = Server()
+    server.run()
