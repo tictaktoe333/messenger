@@ -1,2 +1,8 @@
-host: localhost
-port: 8080
+server:
+  host: localhost
+  port: 8080
+  concurrent_connections: 10
+
+client:
+  host: localhost
+  port: 9090
