@@ -15,7 +15,8 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_host = "localhost"
         self.server_port = 8080
-        with yaml.load(open("config.yaml", "r")) as config:
+        with open("config.yaml", "r") as config_file:
+            config = yaml.safe_load(config_file)
             self.server_host = config.get("server", {}).get("host", "localhost")
             self.server_port = config.get("server", {}).get("port", 8080)
 
@@ -70,3 +71,11 @@ class Client:
             received_message = self.receive_message()
             if received_message:
                 print(received_message)
+
+
+if __name__ == "__main__":
+    username = "username"  # TODO: Replace with your authenticatation system
+    password = "password"  # TODO: Replace with your authenticatation system
+    client = Client(username=username, password=password)
+    client.connect_to_server()
+    client.run()
