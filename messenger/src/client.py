@@ -2,6 +2,7 @@ import logging
 import selectors
 import socket
 import threading
+import yaml
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -12,7 +13,13 @@ class Client:
         self.username = username
         self.password = password
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_address = ("localhost", 55555)
+        self.server_host = "localhost"
+        self.server_port = 8080
+        with yaml.load(open("config.yaml", "r")) as config:
+            self.server_host = config.get("server", {}).get("host", "localhost")
+            self.server_port = config.get("server", {}).get("port", 8080)
+
+        self.server_address = (self.server_host, self.server_port)
 
     def connect_to_server(self):
         try:
