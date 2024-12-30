@@ -17,8 +17,10 @@ class Client:
         self.server_port = 8080
         with open("config.yaml", "r") as config_file:
             config = yaml.safe_load(config_file)
-            self.server_host = config.get("server", {}).get("host", "localhost")
-            self.server_port = config.get("server", {}).get("port", 8080)
+            self.server_host = config.get("server", {}).get(
+                "host", socket.gethostbyname()
+            )
+            self.server_port = config.get("server", {}).get("port", 12345)
 
         self.server_address = (self.server_host, self.server_port)
 

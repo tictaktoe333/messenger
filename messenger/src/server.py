@@ -19,8 +19,10 @@ class Server:
         with open("config.yaml", "r") as f:
             config: dict = yaml.safe_load(f)
             logger.debug("Config loaded:", config)
-        self.server_host = config.get("server", {}).get("host", "localhost")
-        self.server_port = config.get("server", {}).get("port", 8080)
+        self.server_host = config.get("server", {}).get(
+            "host", socket.getsockethostname()
+        )
+        self.server_port = config.get("server", {}).get("port", 12345)
         self.concurrent_connections = config.get("server", {}).get(
             "concurrent_connections", 10
         )
