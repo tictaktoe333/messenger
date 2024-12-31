@@ -21,7 +21,7 @@ class Client:
         with open("config.yaml", "r") as config_file:
             config = yaml.safe_load(config_file)
             self.server_host = config.get("server", {}).get(
-                "host", socket.gethostbyname()
+                "host", socket.gethostname()
             )
             self.server_port = config.get("server", {}).get("port", 12345)
 
@@ -41,15 +41,15 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to disconnect: {e}")
 
-    def send_message_to_user(self, user_id, message):
+    def send_message_to_user(self, sender_id: str, receiver_id: str, message: str):
         try:
             message_length = len(message)
-            header_content = f"{user_id}:{message_length}:"
+            header_content = f"{sender_id}:{receiver_id}:{message_length}:"
             header = create_fixed_length_header(
                 header_content=header_content, header_size=len(header_content)
             )
-            self.client_socket.sendall(f"{header}{message}".encode())
-            logger.info(f"Sent message to user {user_id}: {message}")
+            self.client_socket.send(f"{header}{message}".encode())
+            logger.info(f"{sender_id} sent message to user {receiver_id}: {message}")
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
@@ -68,16 +68,18 @@ class Client:
 
     def run(self):
         while True:
-            user_id = input("Enter your user ID: ")
+            user_id = input("Send message to user: ")
             message = input("Enter your message: ")
-            self.send_message_to_user(user_id, message)
+            self.send_message_to_user(
+                sender_id=self.username, receiver_id=user_id, message=message
+            )
             received_message = self.receive_message()
             if received_message:
                 print(received_message)
 
 
 if __name__ == "__main__":
-    username = "username"  # TODO: Replace with authenticatation system
+    username = input("Enter your username: ")
     password = "password"  # TODO: Replace with authenticatation system
     client = Client(username=username, password=password)
     client.connect_to_server()

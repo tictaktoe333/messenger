@@ -19,9 +19,7 @@ class Server:
         with open("config.yaml", "r") as f:
             config: dict = yaml.safe_load(f)
             logger.debug("Config loaded:", config)
-        self.server_host = config.get("server", {}).get(
-            "host", socket.getsockethostname()
-        )
+        self.server_host = config.get("server", {}).get("host", socket.gethostname())
         self.server_port = config.get("server", {}).get("port", 12345)
         self.concurrent_connections = config.get("server", {}).get(
             "concurrent_connections", 10
@@ -44,7 +42,7 @@ class Server:
             print(f"Received: {data}")
             # send a response back to the client
             response = "Hello, client!"
-            client_socket.sendall(response.encode("utf-8"))
+            client_socket.send(response.encode("utf-8"))
             # register the client socket with the selector for read events
             sel.register(client_socket, selectors.EVENT_READ)
             logger.debug(f"Selector registered for client socket {client_socket}")
@@ -67,6 +65,11 @@ class Server:
             # close the connection with the client
             client_socket.close()
 
+
+# TODO: find out why the client has a broken pipe after the second connection
+# TODO: assign a unique identifier to each client socket and use it for logging and debugging purposes
+# TODO: implement routing logic based on the client's username and IP address
+# TODO: implement a mechanism to handle multiple clients concurrently using threads or asynchronous programming
 
 if __name__ == "__main__":
     server = Server()
