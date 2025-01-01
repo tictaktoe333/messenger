@@ -1,31 +1,45 @@
+import os
 import queue
-import sys
 import threading
 import time
 
-
-# function that reads from stdin and puts it in a queue
-def read_from_stdin(q: queue.Queue):
-    while True:
-        q.put(sys.stdin.read(1))
+from typing import Optional
 
 
-# non-blocking input function that reads from stdin without blocking
-def non_blocking_input(print_message: str):
-    print(print_message)
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
+
+
+def read_from_input(q: queue.Queue, print_message: str) -> None:
+    """reads from input and puts it in a queue"""
+    line = input(print_message)
+    q.put(line)
+
+
+def non_blocking_input(print_message: str) -> Optional[str]:
+    """reads from input and puts it in a queue without blocking"""
     q = queue.Queue()
-    t = threading.Thread(target=read_from_stdin, args=(q,))
+    t = threading.Thread(
+        target=read_from_input,
+        args=(
+            q,
+            print_message,
+        ),
+    )
     t.start()
     while True:
-        message: str = ""
+        c = None
         while not q.empty():
-            message += q.get()
-        if message != "" and message.endswith("\n"):
-            q.queue.clear()
-            return message.strip("\n")
+            c = q.get()
+            yield c
+        if c is not None:
+            t.join()
+            break
+        time.sleep(0.1)  # sleep for a short time to avoid busy waiting
 
 
 def create_fixed_length_header(header_content: str, header_size: int) -> str:
+    """creates a fixed length header with padding"""
     if len(header_content) > header_size:
         raise ValueError(
             f"Header content '{header_content}' exceeds the specified size of {header_size}"

@@ -1,12 +1,10 @@
 import logging
-import os
 import socket
 import sys
-import threading
 from typing import Optional
 import yaml
 
-from .common import create_fixed_length_header, non_blocking_input
+from .common import create_fixed_length_header, non_blocking_input, clear_screen
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -28,7 +26,7 @@ class Client:
 
         self.server_address = (self.server_host, self.server_port)
 
-    def connect_to_server(self):
+    def connect_to_server(self) -> None:
         try:
             self.client_socket.connect(self.server_address)
             logger.info(f"Connected to server at {self.server_address}")
@@ -36,14 +34,16 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to connect: {e}")
 
-    def disconnect_from_server(self):
+    def disconnect_from_server(self) -> None:
         try:
             self.client_socket.close()
             logger.info("Disconnected from server")
         except socket.error as e:
             logger.error(f"Failed to disconnect: {e}")
 
-    def send_message_to_user(self, sender_id: str, receiver_id: str, message: str):
+    def send_message_to_user(
+        self, sender_id: str, receiver_id: str, message: str
+    ) -> None:
         try:
             message_length = len(message)
             header_content = f"{sender_id}:{receiver_id}:{message_length}:"
@@ -55,9 +55,9 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
-    def receive_message(self):
+    def receive_message(self) -> Optional[str]:
         try:
-            data = self.client_socket.recv(1024)
+            data = self.client_socket.recv(1024)  # TODO buffer and header
             if not data:
                 logger.info("Server disconnected")
                 return None
@@ -75,22 +75,22 @@ class Client:
     def run(self):
         while True:
             try:
-                user_id = None
+                user_id = ""
                 message = ""
 
-                user_id = non_blocking_input(
+                for c in non_blocking_input(
                     print_message="Enter user ID to send message to: "
-                )
-                if user_id:
-                    message = non_blocking_input(
-                        print_message="Enter message to send: "
-                    )
+                ):
+                    user_id += c
+
+                for c in non_blocking_input(print_message="Enter message to send: "):
+                    message += c
                 self.send_message_to_user(
                     sender_id=self.username, receiver_id=user_id, message=message
                 )
                 received_message = self.receive_message()
                 if received_message:
-                    os.system("cls" if os.name == "nt" else "clear")
+                    clear_screen()
                     print(received_message)
             except KeyboardInterrupt or SystemExit:
                 self.client_socket.close()
