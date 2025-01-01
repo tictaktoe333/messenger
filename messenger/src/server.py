@@ -69,7 +69,6 @@ class Server:
             print("Waiting for events...")
 
 
-# TODO: find out why the client has a broken pipe after the second connection
 # TODO: assign a unique identifier to each client socket and use it for logging and debugging purposes
 # TODO: implement routing logic based on the client's username and IP address
 # TODO: implement a mechanism to handle multiple clients concurrently using threads or asynchronous programming

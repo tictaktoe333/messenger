@@ -1,11 +1,12 @@
 import logging
+import os
 import socket
 import sys
 import threading
 from typing import Optional
 import yaml
 
-from .common import create_fixed_length_header
+from .common import create_fixed_length_header, non_blocking_input
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -74,13 +75,22 @@ class Client:
     def run(self):
         while True:
             try:
-                user_id = input("Send message to user: ")
-                message = input("Enter your message: ")
+                user_id = None
+                message = ""
+
+                user_id = non_blocking_input(
+                    print_message="Enter user ID to send message to: "
+                )
+                if user_id:
+                    message = non_blocking_input(
+                        print_message="Enter message to send: "
+                    )
                 self.send_message_to_user(
                     sender_id=self.username, receiver_id=user_id, message=message
                 )
                 received_message = self.receive_message()
                 if received_message:
+                    os.system("cls" if os.name == "nt" else "clear")
                     print(received_message)
             except KeyboardInterrupt or SystemExit:
                 self.client_socket.close()
