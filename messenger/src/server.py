@@ -32,11 +32,28 @@ class Server:
         sel.register(self.server_socket, selectors.EVENT_READ)
         logger.debug("Selector registered for server socket")
 
+    def handle_existing_connection(self, client_socket):
+        """handle data from an existing client"""
+        try:
+            data = client_socket.recv(1024).decode("utf-8")
+        except ConnectionResetError:
+            print(f"Connection reset by client {client_socket}")
+            self.clients.remove(client_socket)
+            sel.unregister(client_socket)
+            logger.debug(f"Selector unregistered for client socket {client_socket}")
+            return None
+        print(f"Received: {data}")
+        # send a response back to the client
+        response = "Hello, client!"
+        client_socket.send(response.encode("utf-8"))
+        logger.debug(f"Selector registered for client socket {client_socket}")
+        return None
+
     def run(self):
         while True:
             # accept an incoming connection
             events = sel.select(timeout=1)
-            for key, mask in events:
+            for key, _mask in events:
                 if key.fileobj == self.server_socket:
                     # handle new incoming connections
                     client_socket, addr = self.server_socket.accept()
@@ -47,25 +64,8 @@ class Server:
                         f"Selector registered for client socket {client_socket}"
                     )
                 else:
-                    # handle data from an existing client
-                    client_socket = key.fileobj
-                    try:
-                        data = client_socket.recv(1024).decode("utf-8")
-                    except ConnectionResetError:
-                        print(f"Connection reset by client {client_socket}")
-                        self.clients.remove(client_socket)
-                        sel.unregister(client_socket)
-                        logger.debug(
-                            f"Selector unregistered for client socket {client_socket}"
-                        )
-                        continue
-                    print(f"Received: {data}")
-                    # send a response back to the client
-                    response = "Hello, client!"
-                    client_socket.send(response.encode("utf-8"))
-                    logger.debug(
-                        f"Selector registered for client socket {client_socket}"
-                    )
+                    self.handle_existing_connection(key.fileobj)
+                    logger.debug(f"Handled data from client socket {key.fileobj}")
             print("Waiting for events...")
 
 
