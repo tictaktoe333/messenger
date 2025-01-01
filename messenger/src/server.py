@@ -35,35 +35,29 @@ class Server:
     def run(self):
         while True:
             # accept an incoming connection
-            client_socket, addr = self.server_socket.accept()
-            print(f"Connected by {addr}")
-            # receive data from the client
-            data = client_socket.recv(1024).decode("utf-8")
-            print(f"Received: {data}")
-            # send a response back to the client
-            response = "Hello, client!"
-            client_socket.send(response.encode("utf-8"))
-            # register the client socket with the selector for read events
-            sel.register(client_socket, selectors.EVENT_READ)
-            logger.debug(f"Selector registered for client socket {client_socket}")
-            # wait for events on the selector
             events = sel.select(timeout=1)
             for key, mask in events:
                 if key.fileobj == self.server_socket:
                     # handle new incoming connections
-                    pass
-                elif key.fileobj == client_socket:
-                    # handle data received from the client
+                    client_socket, addr = self.server_socket.accept()
+                    print(f"Accepted connection from {addr}")
+                    self.clients.add(client_socket)
+                    sel.register(client_socket, selectors.EVENT_READ)
+                    logger.debug(
+                        f"Selector registered for client socket {client_socket}"
+                    )
+                else:
+                    # handle data from an existing client
+                    client_socket = key.fileobj
                     data = client_socket.recv(1024).decode("utf-8")
                     print(f"Received: {data}")
                     # send a response back to the client
                     response = "Hello, client!"
-                    client_socket.sendall(response.encode("utf-8"))
-                else:
-                    # handle other events (e.g., write events)
-                    pass
-            # close the connection with the client
-            client_socket.close()
+                    client_socket.send(response.encode("utf-8"))
+                    logger.debug(
+                        f"Selector registered for client socket {client_socket}"
+                    )
+            print("Waiting for events...")
 
 
 # TODO: find out why the client has a broken pipe after the second connection
