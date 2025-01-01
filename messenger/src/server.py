@@ -49,7 +49,16 @@ class Server:
                 else:
                     # handle data from an existing client
                     client_socket = key.fileobj
-                    data = client_socket.recv(1024).decode("utf-8")
+                    try:
+                        data = client_socket.recv(1024).decode("utf-8")
+                    except ConnectionResetError:
+                        print(f"Connection reset by client {client_socket}")
+                        self.clients.remove(client_socket)
+                        sel.unregister(client_socket)
+                        logger.debug(
+                            f"Selector unregistered for client socket {client_socket}"
+                        )
+                        continue
                     print(f"Received: {data}")
                     # send a response back to the client
                     response = "Hello, client!"

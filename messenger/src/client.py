@@ -1,6 +1,6 @@
 import logging
-import selectors
 import socket
+import sys
 import threading
 from typing import Optional
 import yaml
@@ -31,6 +31,7 @@ class Client:
         try:
             self.client_socket.connect(self.server_address)
             logger.info(f"Connected to server at {self.server_address}")
+            self.client_socket.setblocking(False)
         except socket.error as e:
             logger.error(f"Failed to connect: {e}")
 
@@ -63,19 +64,28 @@ class Client:
             logger.info(f"Received message: {message}")
             return message
         except socket.error as e:
-            logger.error(f"Failed to receive message: {e}")
-            return None
+            if e.errno == socket.EWOULDBLOCK or e.errno == socket.EAGAIN:
+                logger.info("Server is busy")
+                return None
+            else:
+                logger.error(f"Failed to receive message: {e}")
+                return None
 
     def run(self):
         while True:
-            user_id = input("Send message to user: ")
-            message = input("Enter your message: ")
-            self.send_message_to_user(
-                sender_id=self.username, receiver_id=user_id, message=message
-            )
-            received_message = self.receive_message()
-            if received_message:
-                print(received_message)
+            try:
+                user_id = input("Send message to user: ")
+                message = input("Enter your message: ")
+                self.send_message_to_user(
+                    sender_id=self.username, receiver_id=user_id, message=message
+                )
+                received_message = self.receive_message()
+                if received_message:
+                    print(received_message)
+            except KeyboardInterrupt or SystemExit:
+                self.client_socket.close()
+                logger.info("Exiting program")
+                sys.exit(130)
 
 
 if __name__ == "__main__":
