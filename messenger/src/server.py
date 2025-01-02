@@ -1,6 +1,7 @@
 import logging
 import selectors
 import socket
+from queue import Queue
 from typing import Optional
 
 import yaml
@@ -25,12 +26,29 @@ class Server:
             "concurrent_connections", 10
         )
         self.clients = set()
+        self.queue = Queue()
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.server_host, self.server_port))
         self.server_socket.listen(self.concurrent_connections)
         logger.info(f"Server listening on {self.server_host}:{self.server_port}")
         sel.register(self.server_socket, selectors.EVENT_READ)
         logger.debug("Selector registered for server socket")
+
+    def send_message_to_client(self, client_socket, message):
+        """send a message to a client"""
+        try:
+            client_socket.send(message.encode("utf-8"))
+        except ConnectionResetError:
+            print(f"Connection reset by client {client_socket}")
+            self.clients.remove(client_socket)
+            sel.unregister(client_socket)
+            logger.debug(f"Selector unregistered for client socket {client_socket}")
+            return None
+
+    def lookup_client_socket(self, client_id):
+        """lookup a client by ID"""
+        # TODO: implement lookup logic based on client_id
+        return None
 
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
@@ -43,10 +61,19 @@ class Server:
             logger.debug(f"Selector unregistered for client socket {client_socket}")
             return None
         print(f"Received: {data}")
-        # send a response back to the client
-        response = "Hello, client!"
-        client_socket.send(response.encode("utf-8"))
-        logger.debug(f"Selector registered for client socket {client_socket}")
+        self.send_message_to_client(client_socket, "Hello from server!")
+        header = data.split(":")
+        data = header[-1]
+        sender_id = header[0]
+        receiver_id = header[1]
+        message_length = int(header[2])
+        # TODO: add data to a queue to be sent to the receiver
+        if 3 + len(sender_id) + len(receiver_id) + len(data) < 1024:  # TODO: sort this
+            self.queue.put((sender_id, receiver_id, data))
+        # TODO: send the message to the receiver
+        # TODO: handle the case where the receiver is not connected
+        # TODO: handle the case where the message is too long to be sent in one packet
+
         return None
 
     def run(self):
@@ -71,7 +98,6 @@ class Server:
 
 # TODO: assign a unique identifier to each client socket and use it for logging and debugging purposes
 # TODO: implement routing logic based on the client's username and IP address
-# TODO: implement a mechanism to handle multiple clients concurrently using threads or asynchronous programming
 
 if __name__ == "__main__":
     server = Server()

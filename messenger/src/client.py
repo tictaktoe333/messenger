@@ -90,7 +90,6 @@ class Client:
                 )
                 received_message = self.receive_message()
                 if received_message:
-                    clear_screen()
                     print(received_message)
             except KeyboardInterrupt or SystemExit:
                 self.client_socket.close()
