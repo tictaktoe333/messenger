@@ -4,7 +4,7 @@ import sys
 from typing import Optional
 import yaml
 
-from .common import create_fixed_length_header, non_blocking_input, clear_screen
+from .common import create_fixed_length_header, non_blocking_input
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -75,8 +75,8 @@ class Client:
     def run(self):
         while True:
             try:
-                user_id = ""
-                message = ""
+                user_id: str = ""
+                message: str = ""
 
                 for c in non_blocking_input(
                     print_message="Enter user ID to send message to: "

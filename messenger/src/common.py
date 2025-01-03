@@ -3,7 +3,7 @@ import queue
 import threading
 import time
 
-from typing import Optional
+from typing import Generator
 
 
 def clear_screen():
@@ -16,7 +16,7 @@ def read_from_input(q: queue.Queue, print_message: str) -> None:
     q.put(line)
 
 
-def non_blocking_input(print_message: str) -> Optional[str]:
+def non_blocking_input(print_message: str) -> Generator[str, None, None]:
     """reads from input and puts it in a queue without blocking"""
     q = queue.Queue()
     t = threading.Thread(
@@ -28,11 +28,11 @@ def non_blocking_input(print_message: str) -> Optional[str]:
     )
     t.start()
     while True:
-        c = None
+        c: str = ""
         while not q.empty():
             c = q.get()
             yield c
-        if c is not None:
+        if c:
             t.join()
             break
         time.sleep(0.1)  # sleep for a short time to avoid busy waiting
