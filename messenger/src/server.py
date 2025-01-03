@@ -1,3 +1,4 @@
+import copy
 import logging
 import selectors
 import socket
@@ -5,6 +6,8 @@ from queue import Queue
 from typing import Optional
 
 import yaml
+
+from .client_info import ClientInfo
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -25,7 +28,7 @@ class Server:
         self.concurrent_connections = config.get("server", {}).get(
             "concurrent_connections", 10
         )
-        self.clients = set()
+        self.clients: dict[socket.SocketType, ClientInfo] = dict()
         self.queue = Queue()
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.server_host, self.server_port))
@@ -40,35 +43,30 @@ class Server:
             client_socket.send(message.encode("utf-8"))
         except ConnectionResetError:
             print(f"Connection reset by client {client_socket}")
-            self.clients.remove(client_socket)
+            self.clients.pop(client_socket)
             sel.unregister(client_socket)
             logger.debug(f"Selector unregistered for client socket {client_socket}")
             return None
 
-    def lookup_client_socket(self, client_id):
-        """lookup a client by ID"""
-        # TODO: implement lookup logic based on client_id
-        return None
-
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
         try:
-            data = client_socket.recv(1024).decode("utf-8")
+            data: str = client_socket.recv(1024).decode("utf-8")
         except ConnectionResetError:
             print(f"Connection reset by client {client_socket}")
-            self.clients.remove(client_socket)
+            self.clients.pop(client_socket)
             sel.unregister(client_socket)
             logger.debug(f"Selector unregistered for client socket {client_socket}")
             return None
         print(f"Received: {data}")
         self.send_message_to_client(client_socket, "Hello from server!")
-        header = data.split(":")
-        data = header[-1]
-        sender_id = header[0]
-        receiver_id = header[1]
-        message_length = int(header[2])
-        # TODO: add data to a queue to be sent to the receiver
-        if 3 + len(sender_id) + len(receiver_id) + len(data) < 1024:  # TODO: sort this
+        header_string_split: list[str] = data.split(":", 3)
+        sender_id: str = header_string_split[0]
+        receiver_id: str = header_string_split[1]
+        only_data: str = header_string_split[3]
+        header: str = copy.deepcopy(data).replace(only_data, "")
+        self.clients[client_socket].username = sender_id
+        if len(data) < 1024:
             self.queue.put((sender_id, receiver_id, data))
         # TODO: send the message to the receiver
         # TODO: handle the case where the receiver is not connected
@@ -85,7 +83,9 @@ class Server:
                     # handle new incoming connections
                     client_socket, addr = self.server_socket.accept()
                     print(f"Accepted connection from {addr}")
-                    self.clients.add(client_socket)
+                    self.clients[client_socket] = ClientInfo(
+                        address=addr, socket=client_socket
+                    )
                     sel.register(client_socket, selectors.EVENT_READ)
                     logger.debug(
                         f"Selector registered for client socket {client_socket}"
