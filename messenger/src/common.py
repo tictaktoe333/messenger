@@ -1,5 +1,6 @@
 import os
 import queue
+from sys import stdin
 import threading
 import time
 
@@ -12,7 +13,8 @@ def clear_screen():
 
 def read_from_input(q: queue.Queue, print_message: str) -> None:
     """reads from input and puts it in a queue"""
-    line = input(print_message)
+    print(print_message)
+    line = stdin.readline().strip()
     q.put(line)
 
 

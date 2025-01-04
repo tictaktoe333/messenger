@@ -1,6 +1,7 @@
 import logging
 import socket
 import sys
+import threading
 from typing import Optional
 import yaml
 
@@ -55,29 +56,29 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
-    def receive_message(self) -> Optional[str]:
-        try:
-            data = self.client_socket.recv(1024)  # TODO buffer and header
-            if not data:
-                logger.info("Server disconnected")
-                return None
-            message = data.decode()
-            logger.info(f"Received message: {message}")
-            return message
-        except socket.error as e:
-            if e.errno == socket.EWOULDBLOCK or e.errno == socket.EAGAIN:
-                logger.info("Server is busy")
-                return None
-            else:
-                logger.error(f"Failed to receive message: {e}")
-                return None
+    def receive_message(self) -> None:
+        while True:
+            try:
+                data = self.client_socket.recv(1024)  # TODO buffer and header
+                if not data:
+                    logger.info("Server disconnected")
+                message = data.decode()
+                logger.info(f"Received message: {message}")
+                print(message)
+                continue
+            except socket.error as e:
+                if e.errno == socket.EWOULDBLOCK or e.errno == socket.EAGAIN:
+                    logger.info("Server is busy")
+                    continue
+                else:
+                    logger.error(f"Failed to receive message: {e}")
+                    return None
 
     def run(self):
         while True:
             try:
                 user_id: str = ""
                 message: str = ""
-
                 for c in non_blocking_input(
                     print_message="Enter user ID to send message to: "
                 ):
@@ -85,12 +86,13 @@ class Client:
 
                 for c in non_blocking_input(print_message="Enter message to send: "):
                     message += c
-                self.send_message_to_user(
-                    sender_id=self.username, receiver_id=user_id, message=message
-                )
-                received_message = self.receive_message()
-                if received_message:
-                    print(received_message)
+                if message:
+                    self.send_message_to_user(
+                        sender_id=self.username, receiver_id=user_id, message=message
+                    )
+            except Exception as e:
+                logger.error(f"Error occurred: {e}")
+                continue
             except KeyboardInterrupt or SystemExit:
                 self.client_socket.close()
                 logger.info("Exiting program")
@@ -102,4 +104,7 @@ if __name__ == "__main__":
     password = "password"  # TODO: Replace with authenticatation system
     client = Client(username=username, password=password)
     client.connect_to_server()
-    client.run()
+    run_thread = threading.Thread(target=client.run).start()
+    receive_thread = threading.Thread(
+        target=client.receive_message, daemon=True
+    ).start()
