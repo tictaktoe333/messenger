@@ -3,7 +3,7 @@ import queue
 import threading
 import time
 
-from typing import Generator
+from typing import Iterable
 
 
 def clear_screen():
@@ -16,7 +16,7 @@ def read_from_input(q: queue.Queue, print_message: str) -> None:
     q.put(line)
 
 
-def non_blocking_input(print_message: str) -> Generator[str, None, None]:
+def non_blocking_input(print_message: str) -> Iterable[str]:
     """reads from input and puts it in a queue without blocking"""
     q = queue.Queue()
     t = threading.Thread(

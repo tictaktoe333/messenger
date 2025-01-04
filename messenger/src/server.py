@@ -29,7 +29,7 @@ class Server:
             "concurrent_connections", 10
         )
         self.clients: dict[socket.SocketType, ClientInfo] = dict()
-        self.queue = Queue()
+        self.message_queue = Queue()
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.server_host, self.server_port))
         self.server_socket.listen(self.concurrent_connections)
@@ -67,7 +67,7 @@ class Server:
         header: str = copy.deepcopy(data).replace(only_data, "")
         self.clients[client_socket].username = sender_id
         if len(data) < 1024:
-            self.queue.put((sender_id, receiver_id, data))
+            self.message_queue.put((sender_id, receiver_id, only_data))
         # TODO: send the message to the receiver
         # TODO: handle the case where the receiver is not connected
         # TODO: handle the case where the message is too long to be sent in one packet
@@ -93,6 +93,13 @@ class Server:
                 else:
                     self.handle_existing_connection(key.fileobj)
                     logger.debug(f"Handled data from client socket {key.fileobj}")
+                while not self.message_queue.empty():
+                    sender_id, receiver_id, only_data = self.message_queue.get()
+                    for socket, client_info in self.clients.items():
+                        print(self.clients.items())
+                        if client_info.username == receiver_id:
+                            socket.send(only_data.encode("utf-8"))
+                        logger.debug(f"Sent message from {sender_id} to {receiver_id}")
             print("Waiting for events...")
 
 
