@@ -56,7 +56,7 @@ def non_blocking_input(print_message: str) -> Iterable[str]:
             t.join()
             break
         if not t.is_alive():  # check if the thread has been stopped by an exit command
-            raise KeyboardInterrupt
+            signal.raise_signal(signal.SIGINT)
         time.sleep(0.1)  # sleep for a short time to avoid busy waiting
 
 

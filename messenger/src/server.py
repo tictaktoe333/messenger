@@ -6,6 +6,8 @@ from queue import Queue
 
 import yaml
 
+from messenger.src.common import setup_signal_handler
+
 from .client_info import ClientInfo
 
 logger = logging.getLogger(__name__)
@@ -66,41 +68,47 @@ class Server:
             header: str = copy.deepcopy(data).replace(only_data, "")
             self.clients[client_socket].username = sender_id
             print(f"Received: {data}")
-            self.send_message_to_client(client_socket, "Hello from server!")
+            # self.send_message_to_client(client_socket, "Hello from server!")
             if len(data) < 1024:
                 self.message_queue.put((sender_id, receiver_id, only_data))
         except ConnectionResetError:
             self.remove_client("Connection reset by peer", client_socket)
             return None
 
+    def events_handler(self, events):
+        for key, _mask in events:
+            if key.fileobj == self.server_socket:
+                # handle new incoming connections
+                client_socket, addr = self.server_socket.accept()
+                print(f"Accepted connection from {addr}")
+                self.clients[client_socket] = ClientInfo(
+                    address=addr, socket=client_socket
+                )
+                self.sel.register(client_socket, selectors.EVENT_READ)
+                logger.debug(f"Selector registered for client socket {client_socket}")
+            if key.fileobj in self.clients:
+                self.handle_existing_connection(key.fileobj)
+                logger.debug(f"Handled data from client socket {key.fileobj}")
+            while not self.message_queue.empty():
+                sender_id, receiver_id, only_data = self.message_queue.get()
+                for socket, client_info in self.clients.items():
+                    if client_info.username == receiver_id:
+                        socket.send((sender_id + ": " + only_data).encode("utf-8"))
+                    logger.debug(f"Sent message from {sender_id} to {receiver_id}")
+
     def run(self):
         while True:
             # accept an incoming connection
-            events = self.sel.select(timeout=1)
-            for key, _mask in events:
-                if key.fileobj == self.server_socket:
-                    # handle new incoming connections
-                    client_socket, addr = self.server_socket.accept()
-                    print(f"Accepted connection from {addr}")
-                    self.clients[client_socket] = ClientInfo(
-                        address=addr, socket=client_socket
-                    )
-                    self.sel.register(client_socket, selectors.EVENT_READ)
-                    logger.debug(
-                        f"Selector registered for client socket {client_socket}"
-                    )
-                if key.fileobj in self.clients:
-                    self.handle_existing_connection(key.fileobj)
-                    logger.debug(f"Handled data from client socket {key.fileobj}")
-                while not self.message_queue.empty():
-                    sender_id, receiver_id, only_data = self.message_queue.get()
-                    for socket, client_info in self.clients.items():
-                        if client_info.username == receiver_id:
-                            socket.send(only_data.encode("utf-8"))
-                        logger.debug(f"Sent message from {sender_id} to {receiver_id}")
-            print("Waiting for events...")
+            try:
+                events = self.sel.select(timeout=1)
+                self.events_handler(events)
+                print("Waiting for events...")
+            except KeyboardInterrupt:
+                break
+        self.sel.close()
 
 
 if __name__ == "__main__":
+    setup_signal_handler()
     server = Server()
     server.run()
