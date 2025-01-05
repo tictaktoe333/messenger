@@ -3,7 +3,6 @@ import logging
 import selectors
 import socket
 from queue import Queue
-from typing import Optional
 
 import yaml
 
@@ -15,21 +14,22 @@ logger.setLevel(logging.DEBUG)
 
 class Server:
     def __init__(self):
-        self.server_host: Optional[str] = None
-        self.server_port: Optional[int] = None
-        self.concurrent_connections: Optional[int] = None
         self.sel = selectors.DefaultSelector()
         with open("config.yaml", "r") as f:
             config: dict = yaml.safe_load(f)
             logger.debug("Config loaded:", config)
-        self.server_host = config.get("server", {}).get("host", socket.gethostname())
-        self.server_port = config.get("server", {}).get("port", 12345)
-        self.concurrent_connections = config.get("server", {}).get(
+        self.server_host: str = config.get("server", {}).get(
+            "host", socket.gethostname()
+        )
+        self.server_port: int = config.get("server", {}).get("port", 12345)
+        self.concurrent_connections: int = config.get("server", {}).get(
             "concurrent_connections", 10
         )
         self.clients: dict[socket.SocketType, ClientInfo] = dict()
-        self.message_queue = Queue()
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.message_queue: Queue[tuple[str, str, str]] = Queue()
+        self.server_socket: socket.socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM
+        )
         self.server_socket.bind((self.server_host, self.server_port))
         self.server_socket.listen(self.concurrent_connections)
         logger.info(f"Server listening on {self.server_host}:{self.server_port}")
@@ -72,10 +72,6 @@ class Server:
         except ConnectionResetError:
             self.remove_client("Connection reset by peer", client_socket)
             return None
-
-        # TODO: send the message to the receiver
-        # TODO: handle the case where the receiver is not connected
-        # TODO: handle the case where the message is too long to be sent in one packet
 
     def run(self):
         while True:
