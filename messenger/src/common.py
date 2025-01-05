@@ -1,5 +1,6 @@
 import os
 import queue
+import signal
 from sys import stdin
 import sys
 import threading
@@ -10,6 +11,18 @@ from typing import Iterable
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
+
+
+def signal_handler(signum, frame):
+    """signal handler for SIGINT (Ctrl+C)"""
+    clear_screen()
+    print("Exiting...")
+    sys.exit(0)
+
+
+def setup_signal_handler():
+    """sets up signal handler for SIGINT (Ctrl+C)"""
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def read_from_input(q: queue.Queue, print_message: str) -> None:

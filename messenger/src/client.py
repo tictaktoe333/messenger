@@ -1,11 +1,10 @@
 import logging
 import socket
-import sys
 import threading
 from typing import Optional
 import yaml
 
-from .common import create_fixed_length_header, non_blocking_input
+from .common import create_fixed_length_header, non_blocking_input, setup_signal_handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -68,7 +67,6 @@ class Client:
                 continue
             except socket.error as e:
                 if e.errno == socket.EWOULDBLOCK or e.errno == socket.EAGAIN:
-                    logger.info("Server is busy")
                     continue
                 else:
                     logger.error(f"Failed to receive message: {e}")
@@ -76,35 +74,33 @@ class Client:
 
     def run(self):
         while True:
-            try:
-                user_id: str = ""
-                message: str = ""
-                for c in non_blocking_input(
-                    print_message="Enter user ID to send message to: "
-                ):
-                    user_id += c
+            user_id: str = ""
+            message: str = ""
+            for c in non_blocking_input(
+                print_message="Enter user ID to send message to: "
+            ):
+                user_id += c
 
-                for c in non_blocking_input(print_message="Enter message to send: "):
-                    message += c
-                if message:
-                    self.send_message_to_user(
-                        sender_id=self.username, receiver_id=user_id, message=message
-                    )
-            except KeyboardInterrupt or SystemExit:
-                self.client_socket.close()
-                logger.info("Exiting program")
-                sys.exit(130)
-            except Exception as e:
-                logger.error(f"Error occurred: {e}")
-                continue
+            for c in non_blocking_input(print_message="Enter message to send: "):
+                message += c
+            if message:
+                self.send_message_to_user(
+                    sender_id=self.username, receiver_id=user_id, message=message
+                )
 
 
 if __name__ == "__main__":
+    setup_signal_handler()
+
     username = input("Enter your username: ")
     password = "password"  # TODO: Replace with authentication system
     client = Client(username=username, password=password)
     client.connect_to_server()
-    run_thread = threading.Thread(target=client.run).start()
-    receive_thread = threading.Thread(
+    receive_thread: threading.Thread = threading.Thread(
         target=client.receive_message, daemon=True
-    ).start()
+    )
+    receive_thread.start()
+    run_thread: threading.Thread = threading.Thread(target=client.run, daemon=True)
+    run_thread.start()
+    receive_thread.join()
+    run_thread.join()
