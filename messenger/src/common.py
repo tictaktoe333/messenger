@@ -13,9 +13,12 @@ def clear_screen():
 
 def read_from_input(q: queue.Queue, print_message: str) -> None:
     """reads from input and puts it in a queue"""
-    print(print_message)
-    line = stdin.readline().strip()
-    q.put(line)
+    try:
+        print(print_message)
+        line = stdin.readline().strip()
+        q.put(line)
+    except KeyboardInterrupt:
+        raise KeyboardInterrupt
 
 
 def non_blocking_input(print_message: str) -> Iterable[str]:
@@ -29,15 +32,19 @@ def non_blocking_input(print_message: str) -> Iterable[str]:
         ),
     )
     t.start()
-    while True:
-        c: str = ""
-        while not q.empty():
-            c = q.get()
-            yield c
-        if c:
-            t.join()
-            break
-        time.sleep(0.1)  # sleep for a short time to avoid busy waiting
+    try:
+        while True:
+            c: str = ""
+            while not q.empty():
+                c = q.get()
+                yield c
+            if c:
+                t.join()
+                break
+            time.sleep(0.1)  # sleep for a short time to avoid busy waiting
+    except KeyboardInterrupt:
+        t.join()
+        raise KeyboardInterrupt
 
 
 def create_fixed_length_header(header_content: str, header_size: int) -> str:
