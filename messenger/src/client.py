@@ -1,10 +1,15 @@
 import logging
 import socket
-import threading
+from threading import Thread
 from typing import Optional
 import yaml
 
-from .common import create_fixed_length_header, non_blocking_input, setup_signal_handler
+from .common import (
+    clear_screen,
+    create_fixed_length_header,
+    non_blocking_input,
+    setup_signal_handler,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -73,14 +78,11 @@ class Client:
                     return None
 
     def run(self):
+        user_id: str = ""
+        for c in non_blocking_input(print_message="Enter user ID to send message to: "):
+            user_id += c
         while True:
-            user_id: str = ""
             message: str = ""
-            for c in non_blocking_input(
-                print_message="Enter user ID to send message to: "
-            ):
-                user_id += c
-
             for c in non_blocking_input(print_message="Enter message to send: "):
                 message += c
             if message:
@@ -95,12 +97,11 @@ if __name__ == "__main__":
     username = input("Enter your username: ")
     password = "password"  # TODO: Replace with authentication system
     client = Client(username=username, password=password)
+    clear_screen()
     client.connect_to_server()
-    receive_thread: threading.Thread = threading.Thread(
-        target=client.receive_message, daemon=True
-    )
+    receive_thread: Thread = Thread(target=client.receive_message, daemon=True)
     receive_thread.start()
-    run_thread: threading.Thread = threading.Thread(target=client.run, daemon=True)
+    run_thread: Thread = Thread(target=client.run, daemon=True)
     run_thread.start()
     receive_thread.join()
     run_thread.join()
