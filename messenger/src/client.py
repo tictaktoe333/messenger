@@ -90,18 +90,18 @@ class Client:
                     self.send_message_to_user(
                         sender_id=self.username, receiver_id=user_id, message=message
                     )
-            except Exception as e:
-                logger.error(f"Error occurred: {e}")
-                continue
             except KeyboardInterrupt or SystemExit:
                 self.client_socket.close()
                 logger.info("Exiting program")
                 sys.exit(130)
+            except Exception as e:
+                logger.error(f"Error occurred: {e}")
+                continue
 
 
 if __name__ == "__main__":
     username = input("Enter your username: ")
-    password = "password"  # TODO: Replace with authenticatation system
+    password = "password"  # TODO: Replace with authentication system
     client = Client(username=username, password=password)
     client.connect_to_server()
     run_thread = threading.Thread(target=client.run).start()
