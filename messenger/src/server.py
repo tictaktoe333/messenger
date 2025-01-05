@@ -27,6 +27,9 @@ class Server:
         self.concurrent_connections: int = config.get("server", {}).get(
             "concurrent_connections", 10
         )
+        self.bytes_per_message: int = config.get("server", {}).get(
+            "bytes_per_message", 1024
+        )
         self.clients: dict[socket.SocketType, ClientInfo] = dict()
         self.message_queue: Queue[tuple[str, str, str]] = Queue()
         self.server_socket: socket.socket = socket.socket(
@@ -57,7 +60,7 @@ class Server:
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
         try:
-            data: str = client_socket.recv(1024).decode("utf-8")
+            data: str = client_socket.recv(self.bytes_per_message).decode("utf-8")
             header_string_split: list[str] = data.split(":", 3)
             if len(header_string_split) != 4:
                 self.remove_client("Invalid header format", client_socket)
@@ -69,7 +72,7 @@ class Server:
             self.clients[client_socket].username = sender_id
             print(f"Received: {data}")
             # self.send_message_to_client(client_socket, "Hello from server!")
-            if len(data) < 1024:
+            if len(data) < self.bytes_per_message:
                 self.message_queue.put((sender_id, receiver_id, only_data))
         except ConnectionResetError:
             self.remove_client("Connection reset by peer", client_socket)

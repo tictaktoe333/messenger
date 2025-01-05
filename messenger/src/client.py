@@ -28,6 +28,7 @@ class Client:
                 "host", socket.gethostname()
             )
             self.server_port = config.get("server", {}).get("port", 12345)
+            self.bytes_per_message = config.get("bytes_per_message", 1024)
 
         self.server_address = (self.server_host, self.server_port)
 
@@ -63,7 +64,9 @@ class Client:
     def receive_message(self) -> None:
         while True:
             try:
-                data = self.client_socket.recv(1024)  # TODO buffer and header
+                data = self.client_socket.recv(
+                    self.bytes_per_message
+                )  # TODO buffer and header
                 if not data:
                     logger.info("Server disconnected")
                 message = data.decode()

@@ -2,6 +2,7 @@ server:
   host: localhost
   port: 12345
   concurrent_connections: 10
+  bytes_per_message: 1024
 
 client:
   host: localhost
