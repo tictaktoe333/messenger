@@ -89,8 +89,9 @@ class Server:
                 )
                 self.sel.register(client_socket, selectors.EVENT_READ)
                 logger.debug(f"Selector registered for client socket {client_socket}")
-            if key.fileobj in self.clients:
-                self.handle_existing_connection(key.fileobj)
+                self.send_message_to_client(client_socket, "connected!")
+            elif key.fileobj in self.clients:
+                self.handle_existing_connection(client_socket=key.fileobj)
                 logger.debug(f"Handled data from client socket {key.fileobj}")
             while not self.message_queue.empty():
                 sender_id, receiver_id, only_data = self.message_queue.get()

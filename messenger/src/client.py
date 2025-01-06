@@ -1,3 +1,4 @@
+import datetime
 import logging
 import socket
 from threading import Thread
@@ -48,7 +49,7 @@ class Client:
             logger.error(f"Failed to disconnect: {e}")
 
     def send_message_to_user(
-        self, sender_id: str, receiver_id: str, message: str
+        self, sender_id: str, receiver_id: str = "", message: str = ""
     ) -> None:
         try:
             message_length = len(message)
@@ -71,7 +72,7 @@ class Client:
                     logger.info("Server disconnected")
                 message = data.decode()
                 logger.info(f"Received message: {message}")
-                print(message)
+                print(datetime.datetime.now().isoformat() + ": " + message)
                 continue
             except socket.error as e:
                 if e.errno == socket.EWOULDBLOCK or e.errno == socket.EAGAIN:
@@ -102,6 +103,7 @@ if __name__ == "__main__":
     client = Client(username=username, password=password)
     clear_screen()
     client.connect_to_server()
+    client.send_message_to_user(sender_id=username)  # to connect and register user
     receive_thread: Thread = Thread(target=client.receive_message, daemon=True)
     receive_thread.start()
     run_thread: Thread = Thread(target=client.run, daemon=True)
