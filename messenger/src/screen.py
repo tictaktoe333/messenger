@@ -1,23 +1,36 @@
+import os
+
+
 class Screen:
     def __init__(self):
-        self.q = []
+        self.message = []
+        self.command = ""
 
-    def add(self, item):
-        self.q.append(item)
+    def add_message(self, item):
+        self.message.append(item)
 
-    def remove(self, item):
-        if item in self.q:
-            self.q.remove(item)
+    def add_command(self, item):
+        self.command = item
 
-    def get(self):
-        return self.q.pop()
+    def remove_message(self, item):
+        if item in self.message:
+            self.message.remove(item)
+
+    def get_message(self):
+        return self.message.pop()
 
     def is_empty(self):
-        return self.q == []
+        return self.message == [] and self.command == ""
 
-    def reset_buffer(self):
-        self.q = []
+    def reset(self):
+        self.message = []
+        self.command = ""
+
+    def clear_screen(self):
+        os.system("cls" if os.name == "nt" else "clear")
 
     def print_all(self):
-        while not self.is_empty():
-            print(self.q.pop())
+        for item in self.message:
+            print(item)
+        if self.command:
+            print(self.command)

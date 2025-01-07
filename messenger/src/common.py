@@ -8,6 +8,8 @@ import time
 
 from typing import Iterable
 
+from .screen import Screen
+
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
@@ -25,9 +27,10 @@ def setup_signal_handler():
     signal.signal(signal.SIGINT, signal_handler)
 
 
-def read_from_input(q: queue.Queue, print_message: str) -> None:
+def read_from_input(q: queue.Queue, print_message: str, screen: Screen) -> None:
     """reads from input and puts it in a queue"""
-    print(print_message)
+    screen.add_command(print_message)
+    screen.print_all()
     line = stdin.readline().strip()
     if line == "exit":
         # close down the thread from inside the thread
@@ -36,15 +39,12 @@ def read_from_input(q: queue.Queue, print_message: str) -> None:
     q.put(line)
 
 
-def non_blocking_input(print_message: str) -> Iterable[str]:
+def non_blocking_input(print_message: str, screen: Screen) -> Iterable[str]:
     """reads from input and puts it in a queue without blocking"""
     q = queue.Queue()
     t = threading.Thread(
         target=read_from_input,
-        args=(
-            q,
-            print_message,
-        ),
+        args=(q, print_message, screen),
     )
     t.start()
     while True:

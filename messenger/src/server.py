@@ -5,10 +5,10 @@ import socket
 from queue import Queue
 
 import yaml
-
 from messenger.src.common import setup_signal_handler
 
 from .client_info import ClientInfo
+from .screen import Screen
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -114,5 +114,6 @@ class Server:
 
 if __name__ == "__main__":
     setup_signal_handler()
+    screen = Screen()
     server = Server()
     server.run()
