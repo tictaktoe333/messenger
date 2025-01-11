@@ -31,7 +31,7 @@ class Client:
                 "host", socket.gethostname()
             )
             self.server_port = config.get("server", {}).get("port", 12345)
-            self.bytes_per_message = config.get("bytes_per_message", 1024)
+            self.bytes_per_packet = config.get("bytes_per_message", 1024)
 
         self.server_address = (self.server_host, self.server_port)
 
@@ -76,15 +76,19 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
+    def receive_packet(self) -> bytes:
+        # TODO buffer and header
+        # if first packet is header, then read rest of packet
+        # else read until end of packet
+        return self.client_socket.recv(self.bytes_per_packet)
+
     def receive_message(self) -> None:
         while True:
             try:
-                data = self.client_socket.recv(
-                    self.bytes_per_message
-                )  # TODO buffer and header
-                if not data:
+                packet = self.receive_packet()  # TODO buffer and header
+                if not packet:
                     logger.info("Server disconnected")
-                message = data.decode()
+                message = packet.decode()
                 logger.info(f"Received message: {message}")
                 self.screen.add_message(
                     datetime.datetime.now().isoformat() + ": " + message

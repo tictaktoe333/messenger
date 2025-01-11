@@ -73,7 +73,7 @@ class Server:
             print(f"Received: {data}")
             # self.send_message_to_client(client_socket, "Hello from server!")
             if len(data) < self.bytes_per_message:
-                self.message_queue.put((sender_id, receiver_id, only_data))
+                self.message_queue.put((sender_id, receiver_id, data))
         except ConnectionResetError:
             self.remove_client("Connection reset by peer", client_socket)
             return None
