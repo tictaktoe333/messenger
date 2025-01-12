@@ -60,7 +60,9 @@ class Server:
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
         try:
-            data: bytes = client_socket.recv(self.bytes_per_message)
+            data: bytes = client_socket.recv(
+                self.bytes_per_message
+            )  # TODO: Add Buffer on receive
 
             sender_id, receiver_id, message_length, header, only_data = parse_header(
                 data

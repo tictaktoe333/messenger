@@ -108,7 +108,9 @@ class Client:
                 message = packet.decode("utf-8")
                 logger.info(f"Received message: {message}")
                 self.screen.add_message(
-                    datetime.datetime.now().isoformat() + ": " + message
+                    datetime.datetime.now().isoformat()
+                    + ": "
+                    + message  # TODO: Strip header from message
                 )
                 if not self.screen.is_empty():
                     clear_screen()
