@@ -1,5 +1,7 @@
+import copy
 import os
 import queue
+import re
 import signal
 from sys import stdin
 import sys
@@ -67,3 +69,25 @@ def create_fixed_length_header(header_content: str, header_size: int) -> str:
             f"Header content '{header_content}' exceeds the specified size of {header_size}"
         )
     return header_content.ljust(header_size)
+
+
+def check_for_header(packet: bytes) -> bool:
+    """checks if a packet contains the expected header"""
+    return re.match(b".*:.*:\\d:.*", packet) is not None
+
+
+def parse_header(packet: bytes):
+    """parses the header from a packet"""
+    try:
+        header_string_split: list[str] = packet.decode("utf-8").split(":", 3)
+        # if len(header_string_split) != 4:
+        #     self.remove_client("Invalid header format", client_socket)
+        #     return None
+        sender_id: str = header_string_split[0]
+        receiver_id: str = header_string_split[1]
+        message_length: int = int(header_string_split[2])
+        only_data: str = header_string_split[3]
+        header: str = copy.deepcopy(packet.decode("utf-8")).replace(only_data, "")
+        return sender_id, receiver_id, message_length, header, only_data
+    except IndexError:
+        raise ConnectionResetError  # reset if the connection is broken
