@@ -5,9 +5,9 @@ import socket
 from queue import Queue
 
 import yaml
-from messenger.src.common import setup_signal_handler
 
 from .client_info import ClientInfo
+from .common import parse_header, setup_signal_handler
 from .screen import Screen
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class Server:
             "bytes_per_message", 1024
         )
         self.clients: dict[socket.SocketType, ClientInfo] = dict()
-        self.message_queue: Queue[tuple[str, str, str]] = Queue()
+        self.message_queue: Queue[tuple[str, str, bytes]] = Queue()
         self.server_socket: socket.socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM
         )
@@ -60,15 +60,11 @@ class Server:
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
         try:
-            data: str = client_socket.recv(self.bytes_per_message).decode("utf-8")
-            header_string_split: list[str] = data.split(":", 3)
-            if len(header_string_split) != 4:
-                self.remove_client("Invalid header format", client_socket)
-                return None
-            sender_id: str = header_string_split[0]
-            receiver_id: str = header_string_split[1]
-            only_data: str = header_string_split[3]
-            header: str = copy.deepcopy(data).replace(only_data, "")
+            data: bytes = client_socket.recv(self.bytes_per_message)
+
+            sender_id, receiver_id, message_length, header, only_data = parse_header(
+                data
+            )
             self.clients[client_socket].username = sender_id
             print(f"Received: {data}")
             # self.send_message_to_client(client_socket, "Hello from server!")
@@ -97,7 +93,7 @@ class Server:
                 sender_id, receiver_id, only_data = self.message_queue.get()
                 for socket, client_info in self.clients.items():
                     if client_info.username == receiver_id:
-                        socket.send((sender_id + ": " + only_data).encode("utf-8"))
+                        socket.send(only_data)
                     logger.debug(f"Sent message from {sender_id} to {receiver_id}")
 
     def run(self):

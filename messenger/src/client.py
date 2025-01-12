@@ -3,12 +3,15 @@ import logging
 import socket
 from threading import Thread
 from typing import Optional
+
 import yaml
 
 from .common import (
+    check_for_header,
     clear_screen,
     create_fixed_length_header,
     non_blocking_input,
+    parse_header,
     setup_signal_handler,
 )
 from .screen import Screen
@@ -76,19 +79,33 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
-    def receive_packet(self) -> bytes:
-        # TODO buffer and header
-        # if first packet is header, then read rest of packet
-        # else read until end of packet
-        return self.client_socket.recv(self.bytes_per_packet)
+    def receive_full_packet(self) -> bytes:
+        full_packet = b""
+        packet = self.client_socket.recv(self.bytes_per_packet)
+        if check_for_header(packet):
+            (
+                sender_id,
+                receiver_id,
+                message_length,
+                header,
+                only_data,
+            ) = parse_header(packet)
+            if len(only_data) == int(message_length):
+                return packet
+            remaining: int = int(message_length) - len(only_data)
+            while remaining > 0:
+                packet = self.client_socket.recv(self.bytes_per_packet)
+                full_packet += packet
+                remaining -= len(packet)
+        return full_packet
 
     def receive_message(self) -> None:
         while True:
             try:
-                packet = self.receive_packet()  # TODO buffer and header
+                packet = self.receive_full_packet()
                 if not packet:
                     logger.info("Server disconnected")
-                message = packet.decode()
+                message = packet.decode("utf-8")
                 logger.info(f"Received message: {message}")
                 self.screen.add_message(
                     datetime.datetime.now().isoformat() + ": " + message
