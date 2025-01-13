@@ -7,11 +7,11 @@ from typing import Optional
 import yaml
 
 from .common import (
-    check_for_header,
     clear_screen,
     create_fixed_length_header,
     non_blocking_input,
     parse_header,
+    receive_full_packet,
     setup_signal_handler,
 )
 from .screen import Screen
@@ -79,38 +79,29 @@ class Client:
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
 
-    def receive_full_packet(self) -> bytes:
-        full_packet = b""
-        packet = self.client_socket.recv(self.bytes_per_packet)
-        if check_for_header(packet):
-            (
-                sender_id,
-                receiver_id,
-                message_length,
-                header,
-                only_data,
-            ) = parse_header(packet)
-            if len(only_data) == int(message_length):
-                return packet
-            remaining: int = int(message_length) - len(only_data)
-            while remaining > 0:
-                packet = self.client_socket.recv(self.bytes_per_packet)
-                full_packet += packet
-                remaining -= len(packet)
-        return full_packet
-
     def receive_message(self) -> None:
         while True:
             try:
-                packet = self.receive_full_packet()
+                packet = receive_full_packet(self.client_socket, self.bytes_per_packet)
                 if not packet:
                     logger.info("Server disconnected")
                 message = packet.decode("utf-8")
+                (
+                    sender_id,
+                    receiver_id,
+                    message_length,
+                    header,
+                    only_data,
+                ) = parse_header(packet)
                 logger.info(f"Received message: {message}")
                 self.screen.add_message(
                     datetime.datetime.now().isoformat()
                     + ": "
-                    + message  # TODO: Strip header from message
+                    + sender_id
+                    + " -> "
+                    + receiver_id
+                    + ": "
+                    + message
                 )
                 if not self.screen.is_empty():
                     clear_screen()

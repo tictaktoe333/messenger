@@ -1,4 +1,5 @@
 import copy
+import errno
 import logging
 import selectors
 import socket
@@ -7,7 +8,7 @@ from queue import Queue
 import yaml
 
 from .client_info import ClientInfo
-from .common import parse_header, setup_signal_handler
+from .common import parse_header, receive_full_packet, setup_signal_handler
 from .screen import Screen
 
 logger = logging.getLogger(__name__)
@@ -60,21 +61,23 @@ class Server:
     def handle_existing_connection(self, client_socket):
         """handle data from an existing client"""
         try:
-            data: bytes = client_socket.recv(
-                self.bytes_per_message
-            )  # TODO: Add Buffer on receive
+            packet = receive_full_packet(client_socket, self.bytes_per_message)
 
             sender_id, receiver_id, message_length, header, only_data = parse_header(
-                data
+                packet
             )
             self.clients[client_socket].username = sender_id
-            print(f"Received: {data}")
+            print(f"Received: {packet}")
             # self.send_message_to_client(client_socket, "Hello from server!")
-            if len(data) < self.bytes_per_message:
-                self.message_queue.put((sender_id, receiver_id, data))
+            if len(packet) < self.bytes_per_message:
+                self.message_queue.put((sender_id, receiver_id, packet))
         except ConnectionResetError:
             self.remove_client("Connection reset by peer", client_socket)
             return None
+        except socket.error:
+            if socket.error.errno == errno.EWOULDBLOCK:
+                # handle the case where the socket is in non-blocking mode and no data is available
+                return None
 
     def events_handler(self, events):
         for key, _mask in events:
@@ -87,7 +90,7 @@ class Server:
                 )
                 self.sel.register(client_socket, selectors.EVENT_READ)
                 logger.debug(f"Selector registered for client socket {client_socket}")
-                self.send_message_to_client(client_socket, "connected!")
+                self.send_message_to_client(client_socket, "::10:connected!")
             elif key.fileobj in self.clients:
                 self.handle_existing_connection(client_socket=key.fileobj)
                 logger.debug(f"Handled data from client socket {key.fileobj}")

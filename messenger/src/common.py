@@ -1,14 +1,15 @@
 import copy
+import errno
 import os
 import queue
 import re
 import signal
-from sys import stdin
+import socket
 import sys
 import threading
 import time
-
-from typing import Iterable
+from sys import stdin
+from typing import Iterable, Optional
 
 from .screen import Screen
 
@@ -79,7 +80,8 @@ def check_for_header(packet: bytes) -> bool:
 def parse_header(packet: bytes):
     """parses the header from a packet"""
     try:
-        header_string_split: list[str] = packet.decode("utf-8").split(":", 3)
+        header_string_split: Optional[list[str]] = None
+        header_string_split = packet.decode("utf-8").split(":", 3)
         # if len(header_string_split) != 4:
         #     self.remove_client("Invalid header format", client_socket)
         #     return None
@@ -90,4 +92,30 @@ def parse_header(packet: bytes):
         header: str = copy.deepcopy(packet.decode("utf-8")).replace(only_data, "")
         return sender_id, receiver_id, message_length, header, only_data
     except IndexError:
+        if header_string_split and header_string_split == [""]:
+            # raise socket.error with errno EWOULDBLOCK
+            raise socket.error(errno.EWOULDBLOCK, "Invalid header format")
         raise ConnectionResetError  # reset if the connection is broken
+
+
+def receive_full_packet(client_socket: socket.socket, bytes_per_packet: int) -> bytes:
+    full_packet = b""
+    packet = client_socket.recv(bytes_per_packet)
+    if check_for_header(packet):
+        (
+            sender_id,
+            receiver_id,
+            message_length,
+            header,
+            only_data,
+        ) = parse_header(packet)
+        if len(only_data) == int(message_length):
+            return packet
+        remaining: int = int(message_length) - len(only_data)
+        while remaining > 0:
+            packet = client_socket.recv(bytes_per_packet)
+            if not packet:
+                continue
+            full_packet += packet
+            remaining -= len(packet)
+    return full_packet
