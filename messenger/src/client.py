@@ -62,7 +62,15 @@ class Client:
             header = create_fixed_length_header(
                 header_content=header_content, header_size=len(header_content)
             )
-            self.client_socket.send(f"{header}{message}".encode())
+            full_message = f"{header}{message}".encode()
+            amount_sent = 0
+            while amount_sent < len(full_message):
+                amount_sent += self.client_socket.send(
+                    full_message
+                )  # TODO: Send the message in chunks not just the full message
+                logger.info(
+                    f"Sent {amount_sent} bytes of message to user {receiver_id}"
+                )
             logger.info(f"{sender_id} sent message to user {receiver_id}: {message}")
         except socket.error as e:
             logger.error(f"Failed to send message to user: {e}")
@@ -101,7 +109,7 @@ class Client:
                     + " -> "
                     + receiver_id
                     + ": "
-                    + message
+                    + only_data
                 )
                 if not self.screen.is_empty():
                     clear_screen()
