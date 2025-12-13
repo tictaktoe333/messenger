@@ -1,6 +1,5 @@
 import copy
 import errno
-import os
 import queue
 import re
 import signal
@@ -12,22 +11,6 @@ from sys import stdin
 from typing import Iterable, Optional
 
 from .screen import Screen
-
-
-def clear_screen():
-    os.system("cls" if os.name == "nt" else "clear")
-
-
-def signal_handler(signum, frame):
-    """signal handler for SIGINT (Ctrl+C)"""
-    clear_screen()
-    print("Exiting...")
-    sys.exit(0)
-
-
-def setup_signal_handler():
-    """sets up signal handler for SIGINT (Ctrl+C)"""
-    signal.signal(signal.SIGINT, signal_handler)
 
 
 def read_from_input(q: queue.Queue, print_message: str, screen: Screen) -> None:
@@ -58,10 +41,11 @@ def non_blocking_input(print_message: str, screen: Screen) -> Iterable[str]:
         if c:
             t.join()
             break
-        if not t.is_alive():  # check if the thread has been stopped by an exit command
+        # check if the thread has been stopped by an exit command
+        if not t.is_alive():
             signal.raise_signal(signal.SIGINT)
-        time.sleep(0.1)  # sleep for a short time to avoid busy waiting
-
+        # sleep for a short time to avoid busy waiting
+        time.sleep(0.1)
 
 def create_fixed_length_header(header_content: str, header_size: int) -> str:
     """creates a fixed length header with padding"""
@@ -93,7 +77,6 @@ def parse_header(packet: bytes):
         return sender_id, receiver_id, message_length, header, only_data
     except IndexError:
         if header_string_split and header_string_split == [""]:
-            # raise socket.error with errno EWOULDBLOCK
             raise socket.error(errno.EWOULDBLOCK, "Invalid header format")
         raise ConnectionResetError  # reset if the connection is broken
 

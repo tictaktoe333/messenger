@@ -1,4 +1,3 @@
-import copy
 import errno
 import logging
 import selectors
@@ -8,8 +7,9 @@ from queue import Queue
 import yaml
 
 from .client_info import ClientInfo
-from .common import parse_header, receive_full_packet, setup_signal_handler
+from .common import parse_header, receive_full_packet
 from .screen import Screen
+from .signal_handler import setup_signal_handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
