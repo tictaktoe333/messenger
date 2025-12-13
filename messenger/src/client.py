@@ -12,9 +12,9 @@ from .common import (
     non_blocking_input,
     parse_header,
     receive_full_packet,
-    setup_signal_handler,
 )
 from .screen import Screen
+from .signal_handler import setup_signal_handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
