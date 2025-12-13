@@ -27,22 +27,22 @@ def read_from_input(q: queue.Queue, print_message: str, screen: Screen) -> None:
 
 def non_blocking_input(print_message: str, screen: Screen) -> Iterable[str]:
     """reads from input and puts it in a queue without blocking"""
-    q = queue.Queue()
-    t = threading.Thread(
+    message_queue = queue.Queue()
+    thread = threading.Thread(
         target=read_from_input,
-        args=(q, print_message, screen),
+        args=(message_queue, print_message, screen),
     )
-    t.start()
+    thread.start()
     while True:
-        c: str = ""
-        while not q.empty():
-            c = q.get()
-            yield c
-        if c:
-            t.join()
+        characters: str = ""
+        while not message_queue.empty():
+            characters = message_queue.get()
+            yield characters
+        if characters:
+            thread.join()
             break
         # check if the thread has been stopped by an exit command
-        if not t.is_alive():
+        if not thread.is_alive():
             signal.raise_signal(signal.SIGINT)
         # sleep for a short time to avoid busy waiting
         time.sleep(0.1)
