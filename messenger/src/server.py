@@ -18,8 +18,8 @@ logger.setLevel(logging.DEBUG)
 class Server:
     def __init__(self):
         self.sel = selectors.DefaultSelector()
-        with open("config.yaml", "r") as f:
-            config: dict = yaml.safe_load(f)
+        with open("config.yaml", "r") as config_file:
+            config: dict = yaml.safe_load(config_file)
             logger.debug("Config loaded:", config)
         self.server_host: str = config.get("server", {}).get(
             "host", socket.gethostname()
