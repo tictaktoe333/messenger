@@ -7,14 +7,13 @@ from typing import Optional
 import yaml
 
 from .common import (
-    clear_screen,
     create_fixed_length_header,
     non_blocking_input,
     parse_header,
     receive_full_packet,
 )
 from .screen import Screen
-from .signal_handler import setup_signal_handler
+from .signal_handler import setup_signal_handler, clear_screen
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
